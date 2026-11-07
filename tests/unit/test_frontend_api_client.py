@@ -39,8 +39,65 @@ def test_api_client_handle_response_error():
 
 
 def test_api_client_base_url_normalization():
+    # URL with trailing slash and /api/v1
     client1 = BackendApiClient(base_url="http://localhost:8000/api/v1/")
     assert client1.base_url == "http://localhost:8000/api/v1"
 
+    # URL with /api/v1
     client2 = BackendApiClient(base_url="http://localhost:8000/api/v1")
     assert client2.base_url == "http://localhost:8000/api/v1"
+
+    # Host-only URL (Render service URL without /api/v1)
+    client3 = BackendApiClient(base_url="https://enterprise-intelligence-backend-exl7.onrender.com")
+    assert client3.base_url == "https://enterprise-intelligence-backend-exl7.onrender.com/api/v1"
+
+    # Host-only URL with trailing slash
+    client4 = BackendApiClient(base_url="https://enterprise-intelligence-backend-exl7.onrender.com/")
+    assert client4.base_url == "https://enterprise-intelligence-backend-exl7.onrender.com/api/v1"
+
+
+def test_login_endpoint_url_construction(monkeypatch):
+    """Verifies login endpoint URL construction and POST request payload."""
+    recorded_calls = []
+
+    def mock_post(self, url, *args, **kwargs):
+        recorded_calls.append({"method": "POST", "url": url, "json": kwargs.get("json")})
+        req = httpx.Request("POST", url)
+        return httpx.Response(
+            status_code=200,
+            json={"access_token": "mock_jwt_token", "user_id": 1, "username": "admin", "role": "admin"},
+            request=req,
+        )
+
+    monkeypatch.setattr(httpx.Client, "post", mock_post)
+
+    # 1. When BACKEND_API_URL is configured without /api/v1 (e.g. Render default web service URL)
+    client_bare_host = BackendApiClient(base_url="https://enterprise-intelligence-backend-exl7.onrender.com")
+    res = client_bare_host.login("admin", "test_pass")
+    assert res["access_token"] == "mock_jwt_token"
+    assert recorded_calls[-1]["url"] == "https://enterprise-intelligence-backend-exl7.onrender.com/api/v1/auth/login"
+    assert recorded_calls[-1]["json"] == {"username": "admin", "password": "test_pass"}
+
+    # 2. When BACKEND_API_URL includes /api/v1
+    client_full = BackendApiClient(base_url="https://enterprise-intelligence-backend-exl7.onrender.com/api/v1")
+    client_full.login("admin", "test_pass")
+    assert recorded_calls[-1]["url"] == "https://enterprise-intelligence-backend-exl7.onrender.com/api/v1/auth/login"
+    # Ensure no path duplication like /api/v1/api/v1
+    assert "/api/v1/api/v1" not in recorded_calls[-1]["url"]
+
+
+def test_health_endpoint_url_construction(monkeypatch):
+    """Verifies health check URL resolves to root /health regardless of base_url configuration."""
+    recorded_calls = []
+
+    def mock_get(self, url, *args, **kwargs):
+        recorded_calls.append({"method": "GET", "url": url})
+        req = httpx.Request("GET", url)
+        return httpx.Response(status_code=200, json={"status": "healthy"}, request=req)
+
+    monkeypatch.setattr(httpx.Client, "get", mock_get)
+
+    client = BackendApiClient(base_url="https://enterprise-intelligence-backend-exl7.onrender.com")
+    res = client.get_health()
+    assert res["status"] == "healthy"
+    assert recorded_calls[-1]["url"] == "https://enterprise-intelligence-backend-exl7.onrender.com/health"

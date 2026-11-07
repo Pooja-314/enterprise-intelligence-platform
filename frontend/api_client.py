@@ -17,9 +17,10 @@ class BackendApiClient:
     """Synchronous HTTP client for Streamlit frontend calling FastAPI backend."""
 
     def __init__(self, base_url: Optional[str] = None):
-        self.base_url = base_url or os.getenv("BACKEND_API_URL", "http://127.0.0.1:8000/api/v1")
-        # Ensure trailing slash stripped
-        self.base_url = self.base_url.rstrip("/")
+        raw_url = (base_url or os.getenv("BACKEND_API_URL", "http://127.0.0.1:8000/api/v1")).strip().rstrip("/")
+        if not raw_url.endswith("/api/v1"):
+            raw_url = f"{raw_url}/api/v1"
+        self.base_url = raw_url
         self.token: Optional[str] = None
         self.timeout = httpx.Timeout(60.0, connect=10.0)
 
@@ -83,7 +84,8 @@ class BackendApiClient:
 
     def get_health(self) -> Dict[str, Any]:
         # Health is mounted at root /health
-        root_url = self.base_url.replace("/api/v1", "")
+        root_url = self.base_url[:-7] if self.base_url.endswith("/api/v1") else self.base_url
+        root_url = root_url.rstrip("/")
         with httpx.Client(timeout=self.timeout) as client:
             resp = client.get(f"{root_url}/health")
             return self._handle_response(resp)

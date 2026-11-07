@@ -7,11 +7,8 @@ services:
     runtime: docker
     dockerfilePath: Dockerfile.backend
     healthCheckPath: /health
-    preDeployCommand: alembic upgrade head
     autoDeploy: true
     envVars:
-      - key: PORT
-        value: "10000"
       - key: ENVIRONMENT
         value: production
       - key: DEBUG
