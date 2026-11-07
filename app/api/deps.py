@@ -1,12 +1,16 @@
 """FastAPI authentication and session dependencies."""
 from typing import Optional
 from fastapi import Depends, Header
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.core.errors import AuthenticationError
 from app.core.security import SecurityService
 from app.db.models import User
 from app.db.session import get_db
+
+# OpenAPI HTTPBearer security scheme (auto_error=False allows fallback to custom headers / optional auth)
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def get_or_create_user(
@@ -38,17 +42,23 @@ def get_or_create_user(
 
 def get_current_user(
     db: Session = Depends(get_db),
-    authorization: Optional[str] = Header(None),
-    x_user_id: Optional[str] = Header(None),
+    token_auth: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
+    authorization: Optional[str] = Header(None, include_in_schema=False),
+    x_user_id: Optional[str] = Header(None, include_in_schema=False),
 ) -> User:
     """Authenticates the request via Bearer JWT token or X-User-Id header.
     Enforces user identification for conversational isolation.
     """
-    if authorization:
+    token = None
+    if isinstance(token_auth, HTTPAuthorizationCredentials) and token_auth.credentials:
+        token = token_auth.credentials
+    elif authorization:
         parts = authorization.split()
         if len(parts) != 2 or parts[0].lower() != "bearer":
             raise AuthenticationError("Invalid Authorization header format. Expected 'Bearer <token>'.")
         token = parts[1]
+
+    if token:
         payload = SecurityService.verify_token(token)
         raw_uid = payload.get("sub") or payload.get("user_id") or 1
         try:
@@ -71,11 +81,17 @@ def get_current_user(
 
 def get_current_user_optional(
     db: Session = Depends(get_db),
-    authorization: Optional[str] = Header(None),
-    x_user_id: Optional[str] = Header(None),
+    token_auth: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
+    authorization: Optional[str] = Header(None, include_in_schema=False),
+    x_user_id: Optional[str] = Header(None, include_in_schema=False),
 ) -> Optional[User]:
     """Optional authentication: returns authenticated User if credentials present, otherwise None."""
     try:
-        return get_current_user(db=db, authorization=authorization, x_user_id=x_user_id)
+        return get_current_user(
+            db=db,
+            token_auth=token_auth,
+            authorization=authorization,
+            x_user_id=x_user_id,
+        )
     except AuthenticationError:
         return None
