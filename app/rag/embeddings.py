@@ -6,6 +6,14 @@ import numpy as np
 
 from app.config import settings
 
+# Force single-threading across CPU math libraries to stay strictly within 512MB RAM limit on Render
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("VECLIB_MAXIMUM_THREADS", "1")
+os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+
 logger = logging.getLogger(__name__)
 
 
@@ -27,6 +35,13 @@ class EmbeddingService:
         """Internal helper to instantiate SentenceTransformer, allowing test isolation."""
         if self._transformer_loader is not None:
             return self._transformer_loader(target, **kwargs)
+        try:
+            import torch
+            torch.set_num_threads(1)
+            torch.set_num_interop_threads(1)
+        except Exception:
+            pass
+        kwargs.setdefault("device", "cpu")
         from sentence_transformers import SentenceTransformer
         return SentenceTransformer(target, **kwargs)
 
@@ -62,6 +77,9 @@ class EmbeddingService:
         return None
 
     def _get_model(self):
+        if self._model is not None:
+            return self._model
+
         if not self._load_attempted:
             self._load_attempted = True
             
@@ -107,6 +125,11 @@ class EmbeddingService:
                         f"Embedding dimension mismatch: expected {self.dimension}, got {actual_dim} from {self.model_name}"
                     )
                 self._model = loaded_model
+                try:
+                    import gc
+                    gc.collect()
+                except Exception:
+                    pass
             else:
                 env = getattr(settings, "ENVIRONMENT", "").lower()
                 if env in ["production", "staging"]:
@@ -162,8 +185,24 @@ class EmbeddingService:
         model = self._get_model()
         if model is not None:
             try:
-                embeddings = model.encode(texts, normalize_embeddings=True, show_progress_bar=False)
+                try:
+                    import torch
+                    with torch.inference_mode():
+                        embeddings = model.encode(
+                            texts,
+                            batch_size=min(16, len(texts)),
+                            normalize_embeddings=True,
+                            show_progress_bar=False,
+                        )
+                except ImportError:
+                    embeddings = model.encode(
+                        texts,
+                        batch_size=min(16, len(texts)),
+                        normalize_embeddings=True,
+                        show_progress_bar=False,
+                    )
                 res = [e.tolist() for e in embeddings]
+                del embeddings
                 # Strictly verify dimension is exactly 384
                 for vec in res:
                     if len(vec) != self.dimension:

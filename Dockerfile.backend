@@ -2,6 +2,13 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# Limit threading in low-memory container (512MB RAM limit on Render Free)
+ENV OMP_NUM_THREADS=1 \
+    MKL_NUM_THREADS=1 \
+    OPENBLAS_NUM_THREADS=1 \
+    NUMEXPR_NUM_THREADS=1 \
+    TOKENIZERS_PARALLELISM=false
+
 # Install system dependencies (build-essential, libpq-dev for postgres)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
