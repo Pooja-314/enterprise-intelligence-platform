@@ -10,6 +10,7 @@ from app.core.errors import InsufficientEvidenceError, PromptInjectionDetectedEr
 from app.core.security import PromptInjectionDefender
 from app.llm.base import LLMResponse
 from app.llm.fallback_router import LLMRouter, llm_router
+from app.rag.embeddings import get_process_memory_mb
 from app.rag.retrieval import HybridRetriever, RetrievedChunk
 from app.rag.verifier import ClaimVerifier, VerificationReport, claim_verifier
 
@@ -84,6 +85,7 @@ EVIDENCE & CITATION DIRECTIVES:
         LLM Inference -> Claim Verification -> Citation Extraction.
         """
         start_time = time.perf_counter()
+        logger.info(f"RAG query initiated. Process RSS: {get_process_memory_mb()}MB")
 
         # 1. Input Prompt Injection Inspection & Sanitization
         sanitized_query = PromptInjectionDefender.validate_or_raise(query_text)
@@ -159,6 +161,7 @@ Please answer the query following all security and citation directives:"""
             is_insufficient = True
 
         latency_ms = (time.perf_counter() - start_time) * 1000
+        logger.info(f"RAG query completed in {latency_ms:.1f}ms. Process RSS: {get_process_memory_mb()}MB")
 
         return RAGResponse(
             answer=final_answer,

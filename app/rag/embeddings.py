@@ -17,6 +17,27 @@ os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 logger = logging.getLogger(__name__)
 
 
+def get_process_memory_mb() -> float:
+    """Returns current process Resident Set Size (RSS) memory in megabytes."""
+    try:
+        import psutil
+        p = psutil.Process()
+        return round(p.memory_info().rss / (1024 * 1024), 2)
+    except Exception:
+        return 0.0
+
+
+def release_system_memory() -> None:
+    """Forces Python garbage collection and returns freed heap pages back to the Linux OS/cgroup."""
+    import gc
+    gc.collect()
+    try:
+        import ctypes
+        ctypes.CDLL("libc.so.6").malloc_trim(0)
+    except Exception:
+        pass
+
+
 class EmbeddingService:
     """Service for generating dense vector embeddings with SentenceTransformers.
     
@@ -29,6 +50,7 @@ class EmbeddingService:
         self.dimension = dimension or settings.EMBEDDING_DIMENSION
         self._model = None
         self._load_attempted = False
+        self._is_quantized = False
         self._transformer_loader = None  # Hook for custom loader injection (e.g. testing)
 
     def _load_sentence_transformer(self, target: str, **kwargs) -> Any:
@@ -42,6 +64,7 @@ class EmbeddingService:
         except Exception:
             pass
         kwargs.setdefault("device", "cpu")
+        kwargs.setdefault("model_kwargs", {"low_cpu_mem_usage": True})
         from sentence_transformers import SentenceTransformer
         return SentenceTransformer(target, **kwargs)
 
@@ -117,19 +140,36 @@ class EmbeddingService:
                         last_err = e
                         logger.warning(f"Failed to download neural embedding model {candidate} from Hub: {e}")
 
-            # Phase 3: Validate dimension and handle environment
+            # Phase 3: Validate dimension, apply dynamic INT8 quantization, and release memory
             if loaded_model is not None:
                 actual_dim = getattr(loaded_model, "get_sentence_embedding_dimension", lambda: None)()
                 if actual_dim is not None and actual_dim != self.dimension:
                     raise ValueError(
                         f"Embedding dimension mismatch: expected {self.dimension}, got {actual_dim} from {self.model_name}"
                     )
+                
+                # Dynamically quantize PyTorch Linear layers to INT8 for ~75% weight memory reduction
+                if self._transformer_loader is None:
+                    try:
+                        import torch
+                        first_mod = getattr(loaded_model, "_first_module", lambda: None)()
+                        auto_model = getattr(first_mod, "auto_model", None) if first_mod else None
+                        target_model = auto_model or loaded_model
+                        if hasattr(torch, "quantization") and hasattr(target_model, "eval"):
+                            target_model.eval()
+                            torch.quantization.quantize_dynamic(
+                                target_model, {torch.nn.Linear}, dtype=torch.qint8, inplace=True
+                            )
+                            self._is_quantized = True
+                            logger.info(
+                                f"Applied dynamic INT8 quantization to embedding model. "
+                                f"Current RSS: {get_process_memory_mb()}MB"
+                            )
+                    except Exception as q_err:
+                        logger.warning(f"Dynamic INT8 quantization skipped: {q_err}")
+
                 self._model = loaded_model
-                try:
-                    import gc
-                    gc.collect()
-                except Exception:
-                    pass
+                release_system_memory()
             else:
                 env = getattr(settings, "ENVIRONMENT", "").lower()
                 if env in ["production", "staging"]:
@@ -158,6 +198,8 @@ class EmbeddingService:
             "actual_dimension": actual_dim or self.dimension,
             "is_loaded": is_loaded,
             "is_cached": is_cached,
+            "is_quantized": getattr(self, "_is_quantized", False),
+            "process_rss_mb": get_process_memory_mb(),
             "cache_dir": self._get_hf_hub_dir(),
             "status": status,
         }
@@ -190,14 +232,14 @@ class EmbeddingService:
                     with torch.inference_mode():
                         embeddings = model.encode(
                             texts,
-                            batch_size=min(16, len(texts)),
+                            batch_size=min(8, len(texts)),
                             normalize_embeddings=True,
                             show_progress_bar=False,
                         )
                 except ImportError:
                     embeddings = model.encode(
                         texts,
-                        batch_size=min(16, len(texts)),
+                        batch_size=min(8, len(texts)),
                         normalize_embeddings=True,
                         show_progress_bar=False,
                     )
@@ -207,6 +249,9 @@ class EmbeddingService:
                 for vec in res:
                     if len(vec) != self.dimension:
                         raise ValueError(f"Embedding dimension mismatch: expected {self.dimension}, got {len(vec)}")
+
+                if len(texts) > 1:
+                    release_system_memory()
                 return res
             except Exception as e:
                 logger.error(f"Error during neural model encoding: {e}")
