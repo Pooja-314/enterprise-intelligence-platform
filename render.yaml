@@ -1,0 +1,51 @@
+services:
+  # ----------------------------------------------------------------------------
+  # 1. FastAPI Backend API Service
+  # ----------------------------------------------------------------------------
+  - type: web
+    name: enterprise-intelligence-backend
+    runtime: docker
+    dockerfilePath: Dockerfile.backend
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: DATABASE_URL
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: LLM_PRIMARY_PROVIDER
+        value: groq
+      - key: LLM_FALLBACK_PROVIDER
+        value: gemini
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash
+      - key: TOP_K_FINAL
+        value: "8"
+
+  # ----------------------------------------------------------------------------
+  # 2. Streamlit Web Dashboard Service
+  # ----------------------------------------------------------------------------
+  - type: web
+    name: enterprise-intelligence-frontend
+    runtime: docker
+    dockerfilePath: Dockerfile.frontend
+    autoDeploy: true
+    envVars:
+      - key: BACKEND_API_URL
+        sync: false
