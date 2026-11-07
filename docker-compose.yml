@@ -30,6 +30,7 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       ENVIRONMENT: production
       DEBUG: "false"
+      PORT: 8000
     ports:
       - "8000:8000"
     depends_on:

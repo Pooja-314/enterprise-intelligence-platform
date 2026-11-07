@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "Enterprise Intelligence Platform"
     ENVIRONMENT: str = "development"
     DEBUG: bool = True
+    PORT: int = 10000
     API_V1_STR: str = "/api/v1"
     SECRET_KEY: str = "change-this-to-a-super-secret-random-key-in-production-min-32-chars"
     ALGORITHM: str = "HS256"
