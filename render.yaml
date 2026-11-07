@@ -37,6 +37,8 @@ services:
         value: gemini-3.8-flash
       - key: TOP_K_FINAL
         value: "8"
+      - key: EMBEDDING_MODEL_NAME
+        value: BAAI/bge-small-en-v1.5
 
   # ----------------------------------------------------------------------------
   # 2. Streamlit Web Dashboard Service

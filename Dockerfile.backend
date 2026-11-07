@@ -13,6 +13,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Pre-download neural embedding model into image layer for instant production startup
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-small-en-v1.5')"
+
 # Copy application source code
 COPY app/ ./app
 COPY alembic.ini .

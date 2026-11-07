@@ -10,6 +10,7 @@ from app.config import settings
 from app.core.errors import AppException, app_exception_handler, generic_exception_handler
 from app.core.telemetry import telemetry
 from app.db.session import check_db_connection
+from app.rag.embeddings import embedding_service
 from app.api.documents import router as documents_router
 from app.api.rag import router as rag_router
 from app.api.agent import router as agent_router
@@ -106,10 +107,7 @@ async def health_check():
             "groq_configured": settings.has_groq,
             "gemini_configured": settings.has_gemini,
         },
-        "embeddings": {
-            "model": settings.EMBEDDING_MODEL_NAME,
-            "dimension": settings.EMBEDDING_DIMENSION,
-        },
+        "embeddings": embedding_service.get_diagnostic(),
         "security": {
             "prompt_injection_defense": settings.PROMPT_INJECTION_PROTECTION_ENABLED,
         },
