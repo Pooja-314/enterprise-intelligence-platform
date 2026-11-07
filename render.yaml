@@ -27,14 +27,14 @@ services:
         sync: false
       - key: CORS_ORIGINS
         value: "*"
-      - key: LLM_PRIMARY_PROVIDER
+      - key: PRIMARY_LLM_PROVIDER
         value: groq
-      - key: LLM_FALLBACK_PROVIDER
+      - key: FALLBACK_LLM_PROVIDER
         value: gemini
       - key: GROQ_MODEL
-        value: llama-3.3-70b-versatile
+        value: openai/gpt-oss-120b
       - key: GEMINI_MODEL
-        value: gemini-2.0-flash
+        value: gemini-3.8-flash
       - key: TOP_K_FINAL
         value: "8"
 

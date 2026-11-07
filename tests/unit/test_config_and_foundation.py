@@ -113,7 +113,7 @@ def test_security_jwt_token_lifecycle():
 def test_telemetry_tracking():
     telemetry.record_execution(
         provider="groq",
-        model="llama-3.3-70b-versatile",
+        model="openai/gpt-oss-120b",
         operation="rag_query",
         prompt_tokens=150,
         completion_tokens=50,
@@ -122,7 +122,7 @@ def test_telemetry_tracking():
     )
     telemetry.record_execution(
         provider="gemini",
-        model="gemini-2.0-flash",
+        model="gemini-3.8-flash",
         operation="rag_query",
         prompt_tokens=200,
         completion_tokens=100,

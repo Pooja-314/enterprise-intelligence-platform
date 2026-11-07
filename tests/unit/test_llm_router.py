@@ -83,3 +83,37 @@ def test_router_exhausted_when_both_fail():
     with pytest.raises(LLMFallbackExhaustedError) as exc_info:
         router.generate("Summarize report.")
     assert "All configured LLM providers failed" in str(exc_info.value)
+
+
+def test_groq_provider_model_configuration():
+    from app.config import Settings, settings
+    from app.llm.groq_provider import GroqProvider
+
+    # Default model in Settings class definition matches updated configuration
+    s = Settings(_env_file=None)
+    assert s.GROQ_MODEL == "openai/gpt-oss-120b"
+    assert settings.GROQ_MODEL == "openai/gpt-oss-120b"
+
+    provider = GroqProvider()
+    assert provider.model == "openai/gpt-oss-120b"
+
+    # Custom model override is supported
+    custom_provider = GroqProvider(model="custom-groq-model")
+    assert custom_provider.model == "custom-groq-model"
+
+
+def test_gemini_provider_model_configuration():
+    from app.config import Settings, settings
+    from app.llm.gemini_provider import GeminiProvider
+
+    # Default model in Settings class definition matches updated configuration
+    s = Settings(_env_file=None)
+    assert s.GEMINI_MODEL == "gemini-3.8-flash"
+    assert settings.GEMINI_MODEL == "gemini-3.8-flash"
+
+    provider = GeminiProvider()
+    assert provider.model == "gemini-3.8-flash"
+
+    # Custom model override is supported
+    custom_provider = GeminiProvider(model="custom-gemini-model")
+    assert custom_provider.model == "custom-gemini-model"

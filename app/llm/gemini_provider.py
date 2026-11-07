@@ -67,7 +67,12 @@ class GeminiProvider(BaseLLMProvider):
                     contents=prompt,
                     config=config,
                 )
-                full_content = response.text or ""
+                full_content = getattr(response, "text", "") or ""
+                if not full_content and hasattr(response, "candidates") and response.candidates:
+                    cand = response.candidates[0]
+                    if hasattr(cand, "content") and cand.content and hasattr(cand.content, "parts"):
+                        parts_text = [p.text for p in cand.content.parts if hasattr(p, "text") and p.text]
+                        full_content = "".join(parts_text)
                 if hasattr(response, "usage_metadata") and response.usage_metadata:
                     prompt_tokens = getattr(response.usage_metadata, "prompt_token_count", 0) or 0
                     completion_tokens = getattr(response.usage_metadata, "candidates_token_count", 0) or 0
@@ -78,7 +83,12 @@ class GeminiProvider(BaseLLMProvider):
                     formatted_prompt,
                     generation_config={"temperature": temperature, "max_output_tokens": max_tokens},
                 )
-                full_content = response.text or ""
+                full_content = getattr(response, "text", "") or ""
+                if not full_content and hasattr(response, "candidates") and response.candidates:
+                    cand = response.candidates[0]
+                    if hasattr(cand, "content") and cand.content and hasattr(cand.content, "parts"):
+                        parts_text = [p.text for p in cand.content.parts if hasattr(p, "text") and p.text]
+                        full_content = "".join(parts_text)
 
             latency_ms = (time.perf_counter() - start) * 1000
             total_tokens = prompt_tokens + completion_tokens
