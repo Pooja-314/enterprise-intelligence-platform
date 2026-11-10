@@ -101,3 +101,73 @@ def test_health_endpoint_url_construction(monkeypatch):
     res = client.get_health()
     assert res["status"] == "healthy"
     assert recorded_calls[-1]["url"] == "https://enterprise-intelligence-backend-exl7.onrender.com/health"
+
+
+def test_run_agent_uses_dedicated_150s_timeout(monkeypatch):
+    """Verifies run_agent uses a dedicated 150-second timeout with 10-second connect."""
+    client_instance_timeouts = []
+
+    original_client_init = httpx.Client.__init__
+
+    def mock_client_init(self, *args, **kwargs):
+        timeout = kwargs.get("timeout")
+        client_instance_timeouts.append(timeout)
+        original_client_init(self, *args, **kwargs)
+
+    def mock_post(self, url, *args, **kwargs):
+        req = httpx.Request("POST", url)
+        return httpx.Response(
+            status_code=200,
+            json={
+                "query": "test query",
+                "final_answer": "test answer",
+                "status": "COMPLETED",
+                "tools_used": [],
+                "citations": [],
+                "steps": [],
+                "total_latency_ms": 120.0,
+                "tokens": {"total": 50},
+            },
+            request=req,
+        )
+
+    monkeypatch.setattr(httpx.Client, "__init__", mock_client_init)
+    monkeypatch.setattr(httpx.Client, "post", mock_post)
+
+    api_client = BackendApiClient(base_url="http://localhost:8000/api/v1")
+    res = api_client.run_agent(query="Test agent query", max_steps=4)
+
+    assert res["status"] == "COMPLETED"
+    assert len(client_instance_timeouts) >= 1
+    used_timeout = client_instance_timeouts[-1]
+    assert isinstance(used_timeout, httpx.Timeout)
+    assert used_timeout.read == 150.0
+    assert used_timeout.connect == 10.0
+
+
+def test_other_endpoints_retain_default_60s_timeout(monkeypatch):
+    """Verifies other API methods retain the default 60s timeout."""
+    client_instance_timeouts = []
+
+    original_client_init = httpx.Client.__init__
+
+    def mock_client_init(self, *args, **kwargs):
+        timeout = kwargs.get("timeout")
+        client_instance_timeouts.append(timeout)
+        original_client_init(self, *args, **kwargs)
+
+    def mock_get(self, url, *args, **kwargs):
+        req = httpx.Request("GET", url)
+        return httpx.Response(status_code=200, json=[], request=req)
+
+    monkeypatch.setattr(httpx.Client, "__init__", mock_client_init)
+    monkeypatch.setattr(httpx.Client, "get", mock_get)
+
+    api_client = BackendApiClient(base_url="http://localhost:8000/api/v1")
+    api_client.list_tools()
+
+    assert len(client_instance_timeouts) >= 1
+    used_timeout = client_instance_timeouts[-1]
+    assert isinstance(used_timeout, httpx.Timeout)
+    assert used_timeout.read == 60.0
+    assert used_timeout.connect == 10.0

@@ -1,4 +1,6 @@
 """REST API endpoints for Multi-Tool AI Agent and individual tool executions."""
+import logging
+import time
 from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, Query, status
 from pydantic import BaseModel, ConfigDict, Field
@@ -9,6 +11,8 @@ from app.agent.tools.doc_analysis import DocAnalysisArgs, DocumentAnalysisTool
 from app.agent.tools.kb_search import KBSearchArgs, KnowledgeBaseSearchTool
 from app.agent.tools.report_gen import ReportGenArgs, StructuredReportGenerationTool
 from app.db.session import get_db
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/agent", tags=["AI Agents"])
 
@@ -58,11 +62,27 @@ def run_agent_workflow(
     db: Session = Depends(get_db),
 ):
     """Executes an autonomous multi-step reasoning workflow using registered tools."""
-    result: AgentExecutionResult = agent_orchestrator.run(
-        db=db,
-        query=request.query,
-        max_steps=request.max_steps,
+    start_time = time.perf_counter()
+    logger.info(
+        f"Agent run request received: max_steps={request.max_steps}, query_length={len(request.query)}"
     )
+    try:
+        result: AgentExecutionResult = agent_orchestrator.run(
+            db=db,
+            query=request.query,
+            max_steps=request.max_steps,
+        )
+        duration_ms = (time.perf_counter() - start_time) * 1000
+        logger.info(
+            f"Agent run completed successfully: status={result.status}, "
+            f"duration_ms={duration_ms:.2f}, tools_used={len(result.tools_used)}"
+        )
+    except Exception as exc:
+        duration_ms = (time.perf_counter() - start_time) * 1000
+        logger.exception(
+            f"Agent run failed after {duration_ms:.2f}ms: {exc}"
+        )
+        raise
 
     return AgentRunResponse(
         query=result.query,

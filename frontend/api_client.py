@@ -198,7 +198,9 @@ class BackendApiClient:
     def run_agent(self, query: str, max_steps: int = 5) -> Dict[str, Any]:
         url = f"{self.base_url}/agent/run"
         payload = {"query": query, "max_steps": max_steps}
-        with httpx.Client(timeout=self.timeout) as client:
+        # Dedicated timeout for multi-step AI Agent reasoning workflows (150s read, 10s connect)
+        agent_timeout = httpx.Timeout(150.0, connect=10.0)
+        with httpx.Client(timeout=agent_timeout) as client:
             resp = client.post(url, json=payload, headers=self._get_headers())
             return self._handle_response(resp)
 
