@@ -72,14 +72,43 @@ CRITICAL INSTRUCTIONS:
                 "citations": [],
             }
 
-        # 3. Assemble document text with boundary delimiters
+        # 3. Assemble document text with boundary delimiters and strict token budget guards
+        # Select representative chunks if document is large (capping at 8 chunks / 5000 chars)
+        MAX_ANALYSIS_CHUNKS = 8
+        MAX_DOCUMENT_CHARS = 5000
+
+        selected_chunks = chunks
+        if len(chunks) > MAX_ANALYSIS_CHUNKS:
+            # Pick first 2 (intro/summary), evenly distributed middle, and last (conclusion)
+            indices = {0, min(1, len(chunks) - 1), len(chunks) - 1}
+            step = max(1, len(chunks) // (MAX_ANALYSIS_CHUNKS - 2))
+            for i in range(2, len(chunks) - 1, step):
+                indices.add(i)
+                if len(indices) >= MAX_ANALYSIS_CHUNKS:
+                    break
+            sorted_idx = sorted(list(indices))
+            selected_chunks = [chunks[i] for i in sorted_idx]
+
         content_blocks = []
         citations_available = []
-        for c in chunks:
-            page = c.chunk_metadata.get("page_number", 1)
-            row = c.chunk_metadata.get("row_number")
+        accumulated_chars = 0
+
+        for c in selected_chunks:
+            page = c.chunk_metadata.get("page_number", 1) if c.chunk_metadata else 1
+            row = c.chunk_metadata.get("row_number") if c.chunk_metadata else None
             ref_str = f"Page: {page}" if page else (f"Row: {row}" if row else "Section")
-            content_blocks.append(f"[Chunk ID: {c.id} | {ref_str}]\n{c.content}")
+            chunk_text = c.content.strip()
+
+            # Ensure we don't blow past maximum character ceiling
+            if accumulated_chars + len(chunk_text) > MAX_DOCUMENT_CHARS:
+                remaining_budget = max(0, MAX_DOCUMENT_CHARS - accumulated_chars)
+                if remaining_budget > 100:
+                    chunk_text = chunk_text[:remaining_budget] + "... [section truncated for context budget]"
+                else:
+                    break
+
+            content_blocks.append(f"[Chunk ID: {c.id} | {ref_str}]\n{chunk_text}")
+            accumulated_chars += len(chunk_text)
             citations_available.append({
                 "chunk_id": c.id,
                 "document_id": doc.id,
@@ -95,7 +124,7 @@ CRITICAL INSTRUCTIONS:
         user_prompt = f"""Please analyze the following document.
 Document Title: {doc.title}
 File Type: {doc.file_type}
-Total Chunks: {len(chunks)}{focus_instruction}
+Total Chunks: {len(chunks)} (Analyzed: {len(selected_chunks)}){focus_instruction}
 
 <document_content>
 {assembled_text}
@@ -111,16 +140,21 @@ Format your analysis into these sections:
             prompt=user_prompt,
             system_prompt=self.SYSTEM_PROMPT,
             temperature=0.1,
-            max_tokens=1500,
+            max_tokens=768,
         )
+
+        analysis_content = llm_response.content.strip()
+        summary_snippet = analysis_content[:300] + ("..." if len(analysis_content) > 300 else "")
 
         return {
             "document_id": doc.id,
             "title": doc.title,
             "file_type": doc.file_type,
             "total_chunks": len(chunks),
+            "chunks_analyzed": len(selected_chunks),
             "focus_area": args.focus_area,
-            "analysis": llm_response.content.strip(),
+            "summary": summary_snippet,
+            "analysis": analysis_content,
             "provider": llm_response.provider,
             "model": llm_response.model,
             "tokens": {

@@ -131,5 +131,10 @@ class GroqProvider(BaseLLMProvider):
                 success=False,
                 error=str(exc),
             )
+            err_str = str(exc)
+            err_lower = err_str.lower()
+            if "rate_limit" in err_lower or "429" in err_lower or "tpm" in err_lower:
+                logger.warning(f"Groq TPM/Rate limit reached on model {self.model} (8,000 TPM limit): {exc}")
+                raise LLMProviderError(f"Groq rate limit exceeded on {self.model} (8,000 TPM limit): {err_str}")
             logger.warning(f"Groq API error on model {self.model}: {exc}")
-            raise LLMProviderError(f"Groq provider error: {str(exc)}")
+            raise LLMProviderError(f"Groq provider error: {err_str}")

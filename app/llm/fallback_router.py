@@ -71,8 +71,9 @@ class LLMRouter:
                 return response
             except Exception as fallback_err:
                 logger.error(f"Fallback LLM provider also failed: {fallback_err}")
+                summary_msg = self._build_actionable_error_message(primary_error, str(fallback_err))
                 raise LLMFallbackExhaustedError(
-                    message="All configured LLM providers failed to generate an answer.",
+                    message=summary_msg,
                     details={"primary_error": primary_error, "fallback_error": str(fallback_err)},
                 )
 
@@ -107,11 +108,54 @@ class LLMRouter:
                 attempt += 1
                 if attempt > self.max_retries:
                     break
+
+                # Non-retryable check: abort if request tokens exceed model limits to prevent wasteful retries
+                err_msg = str(exc).lower()
+                is_oversized_unrecoverable = any(
+                    phrase in err_msg for phrase in [
+                        "exceeds model limit",
+                        "request tokens exceed",
+                        "context length exceeded",
+                        "prompt too large",
+                        "maximum context length",
+                    ]
+                )
+                if is_oversized_unrecoverable:
+                    logger.warning(
+                        f"Non-retryable oversized request on provider {getattr(provider, 'model', 'unknown')}: {exc}. "
+                        "Aborting retries to prevent repeated token-limit failures."
+                    )
+                    break
+
                 sleep_time = min(4.0, 0.5 * (2 ** (attempt - 1)))
                 logger.warning(f"Transient error on provider attempt {attempt}: {exc}. Retrying in {sleep_time}s...")
                 time.sleep(sleep_time)
 
         raise last_exc or LLMProviderError("Retry attempts exhausted.")
+
+    @staticmethod
+    def _build_actionable_error_message(primary_err: Optional[str], fallback_err: Optional[str]) -> str:
+        """Constructs a concise, actionable error message diagnosing 429 TPM limits, 503 unavailability, etc."""
+        p_str = (primary_err or "").lower()
+        f_str = (fallback_err or "").lower()
+
+        primary_desc = "Primary LLM provider failed"
+        if "429" in p_str or "tpm" in p_str or "rate limit" in p_str or "tokens per minute" in p_str:
+            primary_desc = "Primary provider (Groq) exceeded rate limit / TPM threshold (8,000 TPM limit)"
+        elif "timeout" in p_str or "timed out" in p_str:
+            primary_desc = "Primary provider (Groq) timed out"
+        elif "not configured" in p_str:
+            primary_desc = "Primary provider (Groq) is not configured"
+
+        fallback_desc = "fallback provider failed"
+        if "503" in f_str or "unavailable" in f_str or "serviceunavailable" in f_str:
+            fallback_desc = "fallback provider (Gemini) is temporarily unavailable (HTTP 503)"
+        elif "429" in f_str or "quota" in f_str or "rate limit" in f_str:
+            fallback_desc = "fallback provider (Gemini) quota exceeded"
+        elif "not configured" in f_str:
+            fallback_desc = "fallback provider (Gemini) is not configured"
+
+        return f"All configured LLM providers failed to generate an answer. {primary_desc}; {fallback_desc}. Please retry in a few moments."
 
 
 # Global router singleton

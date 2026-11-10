@@ -23,7 +23,7 @@ class ReportGenArgs(BaseModel):
         default=None,
         description="Optional list of specific document IDs to restrict evidence gathering to."
     )
-    max_evidence_chunks: int = Field(default=8, ge=2, le=20, description="Maximum number of evidence chunks to synthesize.")
+    max_evidence_chunks: int = Field(default=5, ge=2, le=10, description="Maximum number of evidence chunks to synthesize.")
 
 
 class StructuredReportGenerationTool(BaseTool):
@@ -140,7 +140,7 @@ Please structure the report with the following Markdown headings:
             prompt=user_prompt,
             system_prompt=self.SYSTEM_PROMPT,
             temperature=0.1,
-            max_tokens=2000,
+            max_tokens=768,
         )
 
         raw_report = llm_response.content.strip()

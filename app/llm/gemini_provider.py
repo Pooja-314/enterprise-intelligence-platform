@@ -125,5 +125,10 @@ class GeminiProvider(BaseLLMProvider):
                 success=False,
                 error=str(exc),
             )
+            err_str = str(exc)
+            err_lower = err_str.lower()
+            if "503" in err_lower or "unavailable" in err_lower:
+                logger.warning(f"Gemini service unavailable (503) on model {self.model}: {exc}")
+                raise LLMProviderError(f"Gemini service temporarily unavailable (503): {err_str}")
             logger.warning(f"Gemini API error on model {self.model}: {exc}")
-            raise LLMProviderError(f"Gemini provider error: {str(exc)}")
+            raise LLMProviderError(f"Gemini provider error: {err_str}")
