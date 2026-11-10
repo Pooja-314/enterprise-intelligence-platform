@@ -21,8 +21,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Pre-download neural embedding model into image layer for instant production startup
-RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-small-en-v1.5')"
+# Pre-download neural embedding ONNX model and tokenizer into image layer for instant production startup
+RUN python -c "from huggingface_hub import hf_hub_download; \
+    repo = 'BAAI/bge-small-en-v1.5'; \
+    [hf_hub_download(repo, f) for f in ['onnx/model.onnx', 'tokenizer.json', 'tokenizer_config.json', 'vocab.txt', 'config.json']]"
 
 # Copy application source code
 COPY app/ ./app
