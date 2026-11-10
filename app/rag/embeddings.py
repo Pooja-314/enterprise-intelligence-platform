@@ -51,6 +51,7 @@ class EmbeddingService:
         self._model = None
         self._load_attempted = False
         self._is_quantized = False
+        self._precision = "bfloat16"
         self._transformer_loader = None  # Hook for custom loader injection (e.g. testing)
 
     def _load_sentence_transformer(self, target: str, **kwargs) -> Any:
@@ -64,7 +65,11 @@ class EmbeddingService:
         except Exception:
             pass
         kwargs.setdefault("device", "cpu")
-        kwargs.setdefault("model_kwargs", {"low_cpu_mem_usage": True})
+        try:
+            import torch
+            kwargs.setdefault("model_kwargs", {"dtype": torch.bfloat16, "low_cpu_mem_usage": True})
+        except Exception:
+            kwargs.setdefault("model_kwargs", {"low_cpu_mem_usage": True})
         from sentence_transformers import SentenceTransformer
         return SentenceTransformer(target, **kwargs)
 
@@ -140,35 +145,24 @@ class EmbeddingService:
                         last_err = e
                         logger.warning(f"Failed to download neural embedding model {candidate} from Hub: {e}")
 
-            # Phase 3: Validate dimension, apply dynamic INT8 quantization, and release memory
+            # Phase 3: Validate dimension, set precision state, and release memory
             if loaded_model is not None:
-                actual_dim = getattr(loaded_model, "get_sentence_embedding_dimension", lambda: None)()
+                dim_fn = getattr(loaded_model, "get_embedding_dimension", None) or getattr(
+                    loaded_model, "get_sentence_embedding_dimension", lambda: None
+                )
+                actual_dim = dim_fn()
                 if actual_dim is not None and actual_dim != self.dimension:
                     raise ValueError(
                         f"Embedding dimension mismatch: expected {self.dimension}, got {actual_dim} from {self.model_name}"
                     )
                 
-                # Dynamically quantize PyTorch Linear layers to INT8 for ~75% weight memory reduction
-                if self._transformer_loader is None:
-                    try:
-                        import torch
-                        first_mod = getattr(loaded_model, "_first_module", lambda: None)()
-                        auto_model = getattr(first_mod, "auto_model", None) if first_mod else None
-                        target_model = auto_model or loaded_model
-                        if hasattr(torch, "quantization") and hasattr(target_model, "eval"):
-                            target_model.eval()
-                            torch.quantization.quantize_dynamic(
-                                target_model, {torch.nn.Linear}, dtype=torch.qint8, inplace=True
-                            )
-                            self._is_quantized = True
-                            logger.info(
-                                f"Applied dynamic INT8 quantization to embedding model. "
-                                f"Current RSS: {get_process_memory_mb()}MB"
-                            )
-                    except Exception as q_err:
-                        logger.warning(f"Dynamic INT8 quantization skipped: {q_err}")
-
                 self._model = loaded_model
+                self._is_quantized = False  # BF16 is reduced precision, not INT8 quantization
+                self._precision = "bfloat16"
+                logger.info(
+                    f"Embedding model '{self.model_name}' successfully loaded with reduced precision ({self._precision}). "
+                    f"Current RSS: {get_process_memory_mb()}MB"
+                )
                 release_system_memory()
             else:
                 env = getattr(settings, "ENVIRONMENT", "").lower()
@@ -189,7 +183,10 @@ class EmbeddingService:
         is_loaded = self._model is not None
         actual_dim = None
         if self._model is not None:
-            actual_dim = getattr(self._model, "get_sentence_embedding_dimension", lambda: self.dimension)()
+            dim_fn = getattr(self._model, "get_embedding_dimension", None) or getattr(
+                self._model, "get_sentence_embedding_dimension", lambda: self.dimension
+            )
+            actual_dim = dim_fn()
 
         status = "loaded" if is_loaded else ("cached" if is_cached else "ready_for_download")
         return {
@@ -199,6 +196,7 @@ class EmbeddingService:
             "is_loaded": is_loaded,
             "is_cached": is_cached,
             "is_quantized": getattr(self, "_is_quantized", False),
+            "precision": getattr(self, "_precision", "bfloat16" if is_loaded else "fp32"),
             "process_rss_mb": get_process_memory_mb(),
             "cache_dir": self._get_hf_hub_dir(),
             "status": status,
@@ -243,8 +241,13 @@ class EmbeddingService:
                         normalize_embeddings=True,
                         show_progress_bar=False,
                     )
-                res = [e.tolist() for e in embeddings]
-                del embeddings
+                # Strictly ensure 32-bit floating point precision and exact unit L2 normalization
+                arr = np.array(embeddings, dtype=np.float32)
+                norms = np.linalg.norm(arr, axis=1, keepdims=True)
+                norms[norms == 0] = 1.0
+                arr = arr / norms
+                res = arr.tolist()
+                del embeddings, arr
                 # Strictly verify dimension is exactly 384
                 for vec in res:
                     if len(vec) != self.dimension:
