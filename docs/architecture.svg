@@ -1,0 +1,197 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="940" viewBox="0 0 1440 940">
+  <defs>
+    <marker id="arrowhead" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0, 9 3.5, 0 7" fill="#334155" />
+    </marker>
+    <marker id="arrowhead-blue" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0, 9 3.5, 0 7" fill="#2563eb" />
+    </marker>
+    <marker id="arrowhead-emerald" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0, 9 3.5, 0 7" fill="#059669" />
+    </marker>
+  </defs>
+
+  <rect fill="#f8fafc" x="0" y="0" width="1440" height="940" />
+
+  <!-- Title Header -->
+  <text x="40" y="42" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="700" fill="#0f172a">Enterprise Intelligence Platform — Production System Architecture</text>
+  <text x="40" y="64" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#475569">Decoupled Streamlit UI + FastAPI Backend (Render Docker) | ONNX BAAI/bge-small-en-v1.5 Embeddings | Neon PostgreSQL/pgvector | Groq &amp; Gemini LLM Fallback | 30-Case Evaluation</text>
+
+  <!-- ROW 1: Frontend, FastAPI Gateway, Ingestion & ONNX, PostgreSQL/pgvector -->
+
+  <!-- 1. Streamlit Frontend -->
+  <rect fill="#eff6ff" stroke="#2563eb" stroke-width="2" rx="10" ry="10" x="40" y="88" width="285" height="215" />
+  <rect fill="#1d4ed8" x="40" y="88" width="285" height="32" rx="8" ry="8" />
+  <rect fill="#1d4ed8" x="40" y="106" width="285" height="14" />
+  <text x="54" y="109" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#ffffff">1. Streamlit Frontend (Port 8501)</text>
+  <text x="54" y="140" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#0f172a">frontend/app.py &amp; views/</text>
+  <text x="54" y="160" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• auth_view.py (JWT login/register)</text>
+  <text x="54" y="178" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• dashboard_view.py (KB &amp; metrics)</text>
+  <text x="54" y="196" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• documents_view.py (Upload &amp; chunks)</text>
+  <text x="54" y="214" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• chat_view.py (RAG Q&amp;A + citations)</text>
+  <text x="54" y="232" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• agent_view.py (Autonomous Agent UI)</text>
+  <text x="54" y="250" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• observability_view.py (Logs &amp; usage)</text>
+  <rect fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="5" ry="5" x="52" y="264" width="261" height="28" />
+  <text x="60" y="282" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#0f172a">api_client.py: httpx (60s std / 150s agent)</text>
+
+  <!-- 2. FastAPI Backend -->
+  <rect fill="#ffffff" stroke="#334155" stroke-width="2" rx="10" ry="10" x="375" y="88" width="335" height="215" />
+  <rect fill="#1e293b" x="375" y="88" width="335" height="32" rx="8" ry="8" />
+  <rect fill="#1e293b" x="375" y="106" width="335" height="14" />
+  <text x="389" y="109" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#ffffff">2. FastAPI API Gateway (Port 10000)</text>
+  <text x="389" y="140" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#0f172a">app/main.py &amp; /api/v1 Routers</text>
+  <text x="389" y="160" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• /auth (/login, /register, /me — JWT)</text>
+  <text x="389" y="178" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• /documents (/upload, list, /chunks, delete)</text>
+  <text x="389" y="196" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• /rag (/retrieve, /query, /verify)</text>
+  <text x="389" y="214" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• /conversations (history, /messages, /summarize)</text>
+  <text x="389" y="232" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• /agent (/run, /tools, tool endpoints)</text>
+  <text x="389" y="250" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• /dashboard/stats, /telemetry, /health</text>
+  <rect fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="5" ry="5" x="387" y="264" width="311" height="28" />
+  <text x="395" y="282" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#0f172a">PromptInjectionDefender + TelemetryTracker</text>
+
+  <!-- 3. Ingestion & ONNX Embeddings -->
+  <rect fill="#f0fdfa" stroke="#0d9488" stroke-width="2" rx="10" ry="10" x="760" y="88" width="320" height="215" />
+  <rect fill="#0f766e" x="760" y="88" width="320" height="32" rx="8" ry="8" />
+  <rect fill="#0f766e" x="760" y="106" width="320" height="14" />
+  <text x="774" y="109" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#ffffff">3. Ingestion &amp; ONNX Embeddings</text>
+  <text x="774" y="140" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#0f172a">app/ingestion/ &amp; app/rag/embeddings.py</text>
+  <text x="774" y="160" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• parser.py: PDF (PyMuPDF), TXT, MD, CSV</text>
+  <text x="774" y="178" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• SHA-256 duplicate file detection</text>
+  <text x="774" y="196" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• chunker.py: 500 tokens / 50 overlap</text>
+  <text x="774" y="214" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• Metadata: page_number, row_number</text>
+  <text x="774" y="232" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• Pure ONNX Runtime + HF Tokenizers</text>
+  <text x="774" y="250" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">  (PyTorch removed for Render 512MB RAM)</text>
+  <rect fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="5" ry="5" x="772" y="264" width="296" height="28" />
+  <text x="780" y="282" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#0f172a">BAAI/bge-small-en-v1.5 (384-d L2 norm)</text>
+
+  <!-- 4. Database Layer -->
+  <rect fill="#eef2ff" stroke="#4f46e5" stroke-width="2" rx="10" ry="10" x="1125" y="88" width="275" height="215" />
+  <rect fill="#4338ca" x="1125" y="88" width="275" height="32" rx="8" ry="8" />
+  <rect fill="#4338ca" x="1125" y="106" width="275" height="14" />
+  <text x="1139" y="109" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#ffffff">4. PostgreSQL + pgvector</text>
+  <text x="1139" y="140" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#0f172a">Neon Managed Postgres (Alembic)</text>
+  <text x="1139" y="160" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• users (RBAC / hashed passwords)</text>
+  <text x="1139" y="178" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• documents (status, hash, totals)</text>
+  <text x="1139" y="196" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• document_chunks: PortableVector(384)</text>
+  <text x="1139" y="214" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• pgvector cosine &lt;=&gt; + tsvector FTS</text>
+  <text x="1139" y="232" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• conversations &amp; messages</text>
+  <text x="1139" y="250" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• audit_logs (activity tracking)</text>
+  <rect fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="5" ry="5" x="1137" y="264" width="251" height="28" />
+  <text x="1145" y="282" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#0f172a">SQLite portable mode for unit tests</text>
+
+  <!-- Row 1 Horizontal Arrows -->
+  <line stroke="#2563eb" stroke-width="2" fill="none" marker-end="url(#arrowhead-blue)" x1="325" y1="195" x2="375" y2="195" />
+  <text x="331" y="185" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" fill="#334155">HTTPS</text>
+  <line stroke="#334155" stroke-width="2" fill="none" marker-end="url(#arrowhead)" x1="710" y1="195" x2="760" y2="195" />
+  <text x="716" y="185" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" fill="#334155">Ingest</text>
+  <line stroke="#334155" stroke-width="2" fill="none" marker-end="url(#arrowhead)" x1="1080" y1="195" x2="1125" y2="195" />
+  <text x="1085" y="185" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" fill="#334155">Store</text>
+
+  <!-- ROW 2: Advanced RAG Pipeline, Memory & Routing, Multi-Provider LLM Router -->
+
+  <!-- 5. Advanced RAG Pipeline -->
+  <rect fill="#eef2ff" stroke="#4f46e5" stroke-width="2" rx="10" ry="10" x="40" y="355" width="445" height="245" />
+  <rect fill="#4338ca" x="40" y="355" width="445" height="32" rx="8" ry="8" />
+  <rect fill="#4338ca" x="40" y="373" width="445" height="14" />
+  <text x="54" y="376" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#ffffff">5. Advanced RAG &amp; Verification Pipeline (app/rag/)</text>
+  <text x="54" y="407" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#0f172a">HybridRetriever (retrieval.py) + RAGGenerator + ClaimVerifier</text>
+  <text x="54" y="427" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">1. Security Gate: PromptInjectionDefender.validate_or_raise()</text>
+  <text x="54" y="446" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">2. Hybrid Search: pgvector dense (k=15) + Postgres tsvector FTS (k=15)</text>
+  <text x="54" y="465" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">   with OR tsquery recovery -&gt; Reciprocal Rank Fusion (RRF k=60)</text>
+  <text x="54" y="484" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">3. Context Hardening: untrusted-doc boundaries + [Doc: title, Page/Row]</text>
+  <text x="54" y="503" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">4. Insufficient-Evidence Gate: abstains if context is empty or absent</text>
+  <text x="54" y="522" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">5. ClaimVerifier (verifier.py): sentence-level lexical &amp; numeric check</text>
+  <text x="54" y="541" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">   (min_support_ratio=0.60; rejects answer if confidence &lt; 0.40)</text>
+  <rect fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="5" ry="5" x="52" y="558" width="421" height="30" />
+  <text x="60" y="577" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#0f172a">TOP_K_FINAL=8 default (.env runtime TOP_K_FINAL=5) | Citations returned</text>
+
+  <!-- 6. Query Router & Conversational Memory -->
+  <rect fill="#f0fdfa" stroke="#0d9488" stroke-width="2" rx="10" ry="10" x="515" y="355" width="405" height="245" />
+  <rect fill="#0f766e" x="515" y="355" width="405" height="32" rx="8" ry="8" />
+  <rect fill="#0f766e" x="515" y="373" width="405" height="14" />
+  <text x="529" y="376" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#ffffff">6. Routing &amp; Conversational Memory</text>
+  <text x="529" y="407" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#0f172a">app/agent/query_router.py &amp; app/memory/</text>
+  <text x="529" y="427" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• QueryRouter classifies user intent into 4 routes:</text>
+  <text x="529" y="446" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">  - CONVERSATIONAL (lightweight chat handling)</text>
+  <text x="529" y="465" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">  - KNOWLEDGE_BASE_RAG (single/factual KB QA)</text>
+  <text x="529" y="484" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">  - DOCUMENT_ANALYSIS (deep file inspection)</text>
+  <text x="529" y="503" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">  - MULTI_STEP_AGENT (complex tool orchestration)</text>
+  <text x="529" y="522" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• manager.py &amp; context.py: per-user conversations,</text>
+  <text x="529" y="541" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">  bounded context history &amp; /summarize compaction</text>
+  <rect fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="5" ry="5" x="527" y="558" width="381" height="30" />
+  <text x="535" y="577" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#0f172a">Stores follow-up turns, sources &amp; token stats in Postgres</text>
+
+  <!-- 7. Multi-Provider LLM Router -->
+  <rect fill="#fffbeb" stroke="#d97706" stroke-width="2" rx="10" ry="10" x="950" y="355" width="450" height="245" />
+  <rect fill="#b45309" x="950" y="355" width="450" height="32" rx="8" ry="8" />
+  <rect fill="#b45309" x="950" y="373" width="450" height="14" />
+  <text x="964" y="376" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#ffffff">7. Multi-Provider LLM Fallback Router (app/llm/)</text>
+  <text x="964" y="407" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#0f172a">fallback_router.py: Tenacity Retries + Failover</text>
+  <text x="964" y="429" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• Primary Provider (groq_provider.py):</text>
+  <text x="964" y="448" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">  Model: openai/gpt-oss-120b (8,000 TPM budget)</text>
+  <text x="964" y="469" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• Secondary Provider (gemini_provider.py):</text>
+  <text x="964" y="488" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">  Model: gemini-3.8-flash (auto-failover on errors/429)</text>
+  <text x="964" y="509" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• Guarded Token Budgets: truncates oversized passages,</text>
+  <text x="964" y="528" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">  limits output tokens, surfaces LLMFallbackExhaustedError</text>
+  <rect fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="5" ry="5" x="962" y="558" width="426" height="30" />
+  <text x="970" y="577" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#0f172a">Unified LLMResponse: content, provider, model, tokens, ms</text>
+
+  <!-- Connectors Row 1 -> Row 2 -->
+  <path stroke="#334155" stroke-width="2" fill="none" marker-end="url(#arrowhead)" d="M 505 303 L 505 328 L 260 328 L 260 355" />
+  <path stroke="#334155" stroke-width="2" fill="none" marker-end="url(#arrowhead)" d="M 545 303 L 545 328 L 710 328 L 710 355" />
+  <path stroke="#334155" stroke-width="2" fill="none" marker-end="url(#arrowhead)" d="M 1262 303 L 1262 328 L 290 328 L 290 355" />
+  <text x="355" y="322" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" fill="#334155">pgvector + FTS Retrieval &amp; Memory Persistence</text>
+  <line stroke="#334155" stroke-width="2" fill="none" marker-end="url(#arrowhead)" x1="485" y1="477" x2="515" y2="477" />
+  <line stroke="#334155" stroke-width="2" fill="none" marker-end="url(#arrowhead)" x1="920" y1="477" x2="950" y2="477" />
+
+  <!-- ROW 3: Autonomous AI Agent + AI Evaluation Framework -->
+
+  <!-- 8. Autonomous AI Agent -->
+  <rect fill="#faf5ff" stroke="#7c3aed" stroke-width="2" rx="10" ry="10" x="40" y="655" width="665" height="230" />
+  <rect fill="#6d28d9" x="40" y="655" width="665" height="32" rx="8" ry="8" />
+  <rect fill="#6d28d9" x="40" y="673" width="665" height="14" />
+  <text x="54" y="676" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#ffffff">8. Autonomous AI Agent Orchestrator &amp; Tools (app/agent/)</text>
+  <text x="54" y="707" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#0f172a">orchestrator.py: Structured Multi-Step Execution Loop (max_steps bounded)</text>
+  <text x="54" y="726" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• Parameter validation (base.py), bounded context before final LLM synthesis, timeout &amp; error recovery</text>
+  <rect fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="5" ry="5" x="54" y="742" width="198" height="90" />
+  <text x="64" y="762" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#0f172a">knowledge_base_search</text>
+  <text x="64" y="780" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">app/agent/tools/kb_search.py</text>
+  <text x="64" y="798" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">Calls HybridRetriever to</text>
+  <text x="64" y="814" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">fetch cited KB evidence</text>
+  <rect fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="5" ry="5" x="268" y="742" width="202" height="90" />
+  <text x="278" y="762" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#0f172a">document_analysis</text>
+  <text x="278" y="780" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">app/agent/tools/doc_analysis.py</text>
+  <text x="278" y="798" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">Inspects chunks &amp; analyzes</text>
+  <text x="278" y="814" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">document structure/topics</text>
+  <rect fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="5" ry="5" x="486" y="742" width="204" height="90" />
+  <text x="496" y="762" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#0f172a">generate_report</text>
+  <text x="496" y="780" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">app/agent/tools/report_gen.py</text>
+  <text x="496" y="798" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">Synthesizes multi-step tool</text>
+  <text x="496" y="814" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">outputs into Markdown report</text>
+  <rect fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="5" ry="5" x="54" y="844" width="636" height="28" />
+  <text x="64" y="863" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#0f172a">Workflow chaining supported (e.g., kb_search / doc_analysis -&gt; generate_report) with source IDs</text>
+
+  <!-- 9. AI Evaluation Framework -->
+  <rect fill="#ecfdf5" stroke="#059669" stroke-width="2" rx="10" ry="10" x="735" y="655" width="665" height="230" />
+  <rect fill="#047857" x="735" y="655" width="665" height="32" rx="8" ry="8" />
+  <rect fill="#047857" x="735" y="673" width="665" height="14" />
+  <text x="749" y="676" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#ffffff">9. AI Evaluation &amp; Benchmark Module (app/evaluation/, scripts/run_evaluation.py)</text>
+  <text x="749" y="707" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#0f172a">benchmark_qa.json (30 cases): answerable (10), multi_hop (6), numerical (5), unanswerable (5), injection (4)</text>
+  <text x="749" y="727" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• metrics.py: Hit@K, Recall@K, Precision@K, MRR, NDCG@K | Fact Recall, Numeric Acc, ONNX Cosine</text>
+  <text x="749" y="746" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• Grounding &amp; Safety: Inline Citation Precision ([Doc]/[【Doc】]), ClaimVerifier, Abstention, Injection Guard</text>
+  <text x="749" y="765" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• runner.py: live mode (Neon + Groq) &amp; offline mode (OfflineExtractiveProvider + SQLite fixture)</text>
+  <text x="749" y="784" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• Telemetry: Retrieval &amp; E2E latency (mean/p50/p95/max) and prompt/completion token aggregation</text>
+  <rect fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="5" ry="5" x="749" y="798" width="636" height="74" />
+  <text x="759" y="817" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#0f172a">Verified Live Run (ID 83884353, 30/30 cases, 0 errors, reports/evaluation_report.{md,json}):</text>
+  <text x="759" y="835" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• Pass Rate: 76.7% | HitRate@5: 100.0% | MRR: 0.8770 | NDCG@5: 0.7670 | Correctness: 0.7258</text>
+  <text x="759" y="853" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#1e293b">• Citation Prec: 100.0% (0% fabricated) | Abstention: 100.0% | Injection Block: 100.0% | Tokens: 35,445</text>
+
+  <!-- Row 2 -> Row 3 Connectors -->
+  <path stroke="#334155" stroke-width="2" fill="none" marker-end="url(#arrowhead)" d="M 710 600 L 710 627 L 372 627 L 372 655" />
+  <path stroke="#059669" stroke-width="2" stroke-dasharray="5,4" fill="none" marker-end="url(#arrowhead-emerald)" d="M 260 600 L 260 627 L 1067 627 L 1067 655" />
+  <text x="415" y="621" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" fill="#334155">Orchestration &amp; Tool Invocation</text>
+  <text x="815" y="621" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" fill="#334155">Evaluates Live RAG &amp; Verification Outputs</text>
+
+  <!-- Footer -->
+  <text x="40" y="918" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#64748b">Repository: enterprise-intelligence-platform | Backend Tests: 159 passed (tests/unit/) | Deployment: Render Docker Web Services + Neon Postgres/pgvector</text>
+</svg>
