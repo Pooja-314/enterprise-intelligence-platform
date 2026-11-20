@@ -1,4 +1,14 @@
 # Enterprise Intelligence Platform
+<div align="center">
+
+<img src="Enterprise%20Intelligence%20Platform%20Showcase.png"
+     alt="Enterprise Intelligence Platform"
+     width="100%"/>
+
+</div>
+
+
+---
 
 An enterprise-grade document intelligence and hybrid RAG platform engineered with resilient multi-provider LLM fallback, multi-tool AI agents, conversational memory, claim verification, and real-time telemetry.
 
